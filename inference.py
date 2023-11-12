@@ -11,7 +11,9 @@ with torch.inference_mode():
     pipe = StableDiffusionXLPipeline.from_pretrained(
       path, torch_dtype=torch.float16, use_safetensors=True
     )
-    pipe.to(f"cuda")
-    pipe.unet.to(device=f"cuda", dtype=torch.float16, memory_format=torch.channels_last)
+    pipe.to("cuda")
+    pipe.unet.to(
+        device="cuda", dtype=torch.float16, memory_format=torch.channels_last
+    )
     img = pipe(prompt=prompt,negative_prompt=negative_prompt, num_inference_steps=50, guidance_scale = 9, num_images_per_prompt=1).images[0]
-    img.save(f"image.png")
+    img.save("image.png")
