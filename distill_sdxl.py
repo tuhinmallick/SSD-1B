@@ -143,23 +143,29 @@ def cast_hook(unet, dicts, level = "block", layers = ["down", "mid", "up"], midd
                 unet.down_blocks[2].attentions[i].register_forward_hook(getActivation(dicts,f'd2a{i}',True))
         if "mid" in layers:
             if middle_truncate:
-                unet.mid_block.resnet.register_forward_hook(getActivation(dicts,f'mr{0}',False))
+                unet.mid_block.resnet.register_forward_hook(getActivation(dicts, 'mr0', False))
             if not middle_truncate:
-                unet.mid_block.register_forward_hook(getActivation(dicts,f'm',False))
-                unet.mid_block.resnets[0].register_forward_hook(getActivation(dicts,f'mr{0}',False))
-                unet.mid_block.resnets[1].register_forward_hook(getActivation(dicts,f'mr{1}',False))
-                unet.mid_block.attentions[0].register_forward_hook(getActivation(dicts,f'ma{0}',False))
+                unet.mid_block.register_forward_hook(getActivation(dicts, 'm', False))
+                unet.mid_block.resnets[0].register_forward_hook(
+                    getActivation(dicts, 'mr0', False)
+                )
+                unet.mid_block.resnets[1].register_forward_hook(
+                    getActivation(dicts, 'mr1', False)
+                )
+                unet.mid_block.attentions[0].register_forward_hook(
+                    getActivation(dicts, 'ma0', False)
+                )
         if "up" in layers:
             for i in range(3):
                 unet.up_blocks[0].resnets[i].register_forward_hook(getActivation(dicts,f'u0r{i}',False))
             for j in range(3):
                 unet.up_blocks[0].attentions[j].register_forward_hook(getActivation(dicts,f'u0a{j}',True))
-            
+
             for i in range(3):
                 unet.up_blocks[1].resnets[i].register_forward_hook(getActivation(dicts,f'u1r{i}',False))
             for j in range(3):
                 unet.up_blocks[1].attentions[j].register_forward_hook(getActivation(dicts,f'u1a{j}',True))
-            
+
             for i in range(3):
                 unet.up_blocks[2].resnets[i].register_forward_hook(getActivation(dicts,f'u2r{i}',False))
 
@@ -167,35 +173,33 @@ def cast_hook(unet, dicts, level = "block", layers = ["down", "mid", "up"], midd
         if "down" in layers:
             for i in range(2):
                 unet.down_blocks[0].resnets[i].register_forward_hook(getActivation(dicts,f'd0r{i}',False))
-        
+
             for i in range(2):
                 unet.down_blocks[1].attentions[i].register_forward_hook(getActivation(dicts,f'd1a{i}',True))
                 unet.down_blocks[1].resnets[i].register_forward_hook(getActivation(dicts,f'd1r{i}',False))
-        
+
             for i in range(2):
                 for j in range(10):
                     unet.down_blocks[2].attentions[i].transformer_blocks[j].register_forward_hook(getActivation(dicts,f'd2a{i}t{j}',False))
                 unet.down_blocks[2].resnets[i].register_forward_hook(getActivation(dicts,f'd2r{i}',False))
-        
+
         if "mid" in layers:    
             for i in range(2):
                 unet.mid_block.resnets[i].register_forward_hook(getActivation(dicts,f'mr{i}',False))
             for j in range(10):
                 unet.mid_block.attentions[0].transformer_blocks[j].register_forward_hook(getActivation(dicts,f'ma0t{j}',False))
-        
+
         if "up" in layers:
             for i in range(3):
                 unet.up_blocks[0].resnets[i].register_forward_hook(getActivation(dicts,f'u0r{i}',False))
-            for j in range(3):
-                for i in range(3):
-                    unet.up_blocks[0].attentions[j].transformer_blocks[i].register_forward_hook(getActivation(dicts,f'u0a{j}t{i}',False))
-            
+            for j, i in itertools.product(range(3), range(3)):
+                unet.up_blocks[0].attentions[j].transformer_blocks[i].register_forward_hook(getActivation(dicts,f'u0a{j}t{i}',False))
+
             for i in range(3):
                 unet.up_blocks[1].resnets[i].register_forward_hook(getActivation(dicts,f'u1r{i}',False))
-            for j in range(3):
-                for i in range(2):
-                    unet.up_blocks[1].attentions[j].transformer_blocks[i].register_forward_hook(getActivation(dicts,f'u1a{j}t{i}',False))
-            
+            for j, i in itertools.product(range(3), range(2)):
+                unet.up_blocks[1].attentions[j].transformer_blocks[i].register_forward_hook(getActivation(dicts,f'u1a{j}t{i}',False))
+
             for i in range(3):
                 unet.up_blocks[2].resnets[i].register_forward_hook(getActivation(dicts,f'u2r{i}',False))
 
@@ -499,7 +503,7 @@ def parse_args(input_args=None):
         args = parser.parse_args()
 
     env_local_rank = int(os.environ.get("LOCAL_RANK", -1))
-    if env_local_rank != -1 and env_local_rank != args.local_rank:
+    if env_local_rank not in [-1, args.local_rank]:
         args.local_rank = env_local_rank
 
     # Sanity checks
@@ -538,8 +542,7 @@ def tokenize_prompt(tokenizer, prompt):
         truncation=True,
         return_tensors="pt",
     )
-    text_input_ids = text_inputs.input_ids
-    return text_input_ids
+    return text_inputs.input_ids
 
 
 # Adapted from pipelines.StableDiffusionXLPipeline.encode_prompt
